@@ -9,6 +9,7 @@ import MahasiswaDetail from './pages/MahasiswaDetail';
 import Setoran from './pages/Setoran';
 import Rekap from './pages/Rekap';
 import Pengaturan from './pages/Pengaturan';
+import NotFound from './pages/NotFound'; // ← TAMBAHKAN INI
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -46,7 +47,13 @@ export default function App() {
               <Route path="setoran" element={<Setoran />} />
               <Route path="rekap" element={<Rekap />} />
               <Route path="pengaturan" element={<Pengaturan />} />
+              
+              {/* ✅ TAMBAHKAN ROUTE 404 */}
+              <Route path="*" element={<NotFound />} />
             </Route>
+            
+            {/* ✅ 404 untuk halaman di luar layout (sebelum login) */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </ToastProvider>
       </AuthProvider>

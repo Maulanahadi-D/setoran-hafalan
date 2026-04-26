@@ -6,46 +6,51 @@ export const useApi = () => {
   const [loading, setLoading] = useState(false);
   const { addToast } = useToast();
 
-  const handleError = useCallback((error) => {
-    const status = error.response?.status;
-    const message = error.response?.data?.message;
-    const url = error.config?.url;
+  const handleError = useCallback((error, customMessage) => {
+    const status = error?.response?.status;
+    const message = error?.response?.data?.message || customMessage;
 
-    console.error('❌ API Error:', {
-      url,
-      status,
-      message,
-      data: error.response?.data
-    });
+    console.error('❌ API Error:', { status, message });
 
     switch (status) {
       case 400:
-        addToast(message || 'Data sudah ada atau tidak valid', 'error');
+        if (message?.includes('udah tercatat') || message?.includes('duplikat')) {
+          addToast('⚠️ Setoran sudah ada sebelumnya!', 'warning');
+        } else {
+          addToast(message || 'Data tidak valid', 'error');
+        }
         break;
       case 401:
-        addToast('Sesi berakhir, mencoba refresh...', 'warning');
+        addToast('Sesi berakhir, silakan login kembali', 'error');
         break;
       case 403:
-        addToast(message || 'Anda tidak memiliki akses', 'error');
+        addToast(message || 'Anda tidak memiliki akses!', 'error');
         break;
       case 404:
         addToast(message || 'Data tidak ditemukan', 'error');
         break;
+      case 408:
+        addToast('Server tidak merespon. Coba lagi.', 'error');
+        break;
+      case 500:
+        addToast('Server error. Silakan coba beberapa saat lagi.', 'error');
+        break;
       default:
-        addToast(message || 'Terjadi kesalahan server', 'error');
+        if (message) {
+          addToast(message, 'error');
+        }
     }
+
     return null;
   }, [addToast]);
 
   const fetchPaSaya = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('🔍 Fetching /pa-saya...');
       const response = await setoranService.getPaSaya();
-      console.log('✅ /pa-saya response:', response.data);
       return response.data;
     } catch (error) {
-      return handleError(error);
+      return handleError(error, 'Gagal memuat data mahasiswa');
     } finally {
       setLoading(false);
     }
@@ -54,12 +59,10 @@ export const useApi = () => {
   const fetchMahasiswaSetoran = useCallback(async (nim) => {
     setLoading(true);
     try {
-      console.log(`🔍 Fetching /mahasiswa/setoran/${nim}...`);
       const response = await setoranService.getMahasiswaSetoran(nim);
-      console.log(`✅ /mahasiswa/setoran/${nim} response:`, response.data);
       return response.data;
     } catch (error) {
-      return handleError(error);
+      return handleError(error, `Gagal memuat data mahasiswa ${nim}`);
     } finally {
       setLoading(false);
     }
@@ -68,13 +71,11 @@ export const useApi = () => {
   const submitSetoran = useCallback(async (nim, data) => {
     setLoading(true);
     try {
-      console.log(`🔍 POST /mahasiswa/setoran/${nim}`, data);
       const response = await setoranService.saveSetoran(nim, data);
-      console.log('✅ POST response:', response.data);
-      addToast(response.data.message || 'Setoran berhasil disimpan! ✨', 'success');
+      addToast(response.data?.message || 'Setoran berhasil disimpan! ✨', 'success');
       return response.data;
     } catch (error) {
-      return handleError(error);
+      return handleError(error, 'Gagal menyimpan setoran');
     } finally {
       setLoading(false);
     }
@@ -83,13 +84,11 @@ export const useApi = () => {
   const removeSetoran = useCallback(async (nim, data) => {
     setLoading(true);
     try {
-      console.log(`🔍 DELETE /mahasiswa/setoran/${nim}`, data);
       const response = await setoranService.deleteSetoran(nim, data);
-      console.log('✅ DELETE response:', response.data);
-      addToast(response.data.message || 'Setoran berhasil dihapus!', 'success');
+      addToast(response.data?.message || 'Setoran berhasil dihapus!', 'success');
       return response.data;
     } catch (error) {
-      return handleError(error);
+      return handleError(error, 'Gagal menghapus setoran');
     } finally {
       setLoading(false);
     }
