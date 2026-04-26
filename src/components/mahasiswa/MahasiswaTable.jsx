@@ -14,97 +14,80 @@ export default function MahasiswaTable({ data, onDetail }) {
         </thead>
         <tbody className="divide-y divide-gray-200">
           {data.map((m) => {
-            const progress = m.info_setoran.persentase_progres_setor;
-            const sudahSetor = m.info_setoran.total_sudah_setor;
-            const wajibSetor = m.info_setoran.total_wajib_setor;
-            
-            // PERBAIKAN: Tentukan status berdasarkan data yang valid
-            const getStatus = () => {
-              // Jika total_sudah_setor = 0, pasti belum setor
-              if (sudahSetor === 0) {
-                return {
-                  label: 'Belum Setor',
-                  className: 'bg-gray-100 text-gray-600'
-                };
-              }
-              
-              // Jika progress = 100 atau sudah_setor = wajib_setor, lunas
-              if (progress >= 100 || sudahSetor >= wajibSetor) {
-                return {
-                  label: 'Lunas ✓',
-                  className: 'bg-emerald-100 text-emerald-800'
-                };
-              }
-              
-              // Jika progress > 0 tapi < 100, dalam progress
-              if (progress > 0 && progress < 100) {
-                return {
-                  label: `${sudahSetor}/${wajibSetor} Surah`,
-                  className: 'bg-yellow-100 text-yellow-800'
-                };
-              }
-              
-              // Fallback: jika data tidak valid
-              return {
-                label: 'Belum Setor',
-                className: 'bg-gray-100 text-gray-600'
-              };
+            // ✅ STEP 1: Extract data with safe defaults
+            const sudahSetor = m?.info_setoran?.total_sudah_setor || 0;
+            const wajibSetor = m?.info_setoran?.total_wajib_setor || 0;
+            const progress = m?.info_setoran?.persentase_progres_setor || 0;
+
+            // ✅ STEP 2: Determine state ONCE (single source of truth)
+            const getState = () => {
+              if (sudahSetor === 0) return 'EMPTY';        // 0 surah setor
+              if (sudahSetor >= wajibSetor) return 'FULL';  // All surah setor
+              return 'PARTIAL';                              // Some surah setor
             };
 
-            const status = getStatus();
-            
-            // PERBAIKAN: Hitung ulang progress untuk memastikan akurasi
-            const calculatedProgress = wajibSetor > 0 
-              ? Math.round((sudahSetor / wajibSetor) * 100) 
-              : 0;
-            
-            // Gunakan progress dari API, tapi validasi
-            const displayProgress = sudahSetor === 0 ? 0 : progress;
-            
+            const state = getState();
+
+            // ✅ STEP 3: Config based on state (no conflicting conditions)
+            const config = {
+              EMPTY: {
+                color: 'bg-gray-300',
+                textColor: 'text-gray-400',
+                width: '0%',
+                percentage: '0%',
+                statusLabel: 'Belum Setor',
+                statusClass: 'bg-gray-100 text-gray-600',
+              },
+              PARTIAL: {
+                color: progress < 30 ? 'bg-orange-500' : progress < 70 ? 'bg-yellow-500' : 'bg-emerald-500',
+                textColor: progress < 30 ? 'text-orange-600' : progress < 70 ? 'text-yellow-600' : 'text-emerald-600',
+                width: `${Math.max(progress, 3)}%`,
+                percentage: `${progress}%`,
+                statusLabel: `${sudahSetor}/${wajibSetor} Surah`,
+                statusClass: 'bg-yellow-100 text-yellow-800',
+              },
+              FULL: {
+                color: 'bg-emerald-500',
+                textColor: 'text-emerald-600',
+                width: '100%',
+                percentage: '100%',
+                statusLabel: 'Lunas ✓',
+                statusClass: 'bg-emerald-100 text-emerald-800',
+              },
+            };
+
+            const c = config[state];
+
             return (
               <tr key={m.nim} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 text-sm text-gray-800">{m.nim}</td>
                 <td className="px-6 py-4 text-sm font-medium text-gray-800">{m.nama}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{m.angkatan}</td>
+                
+                {/* Progress Bar */}
                 <td className="px-6 py-4">
                   <div className="flex items-center space-x-3">
-                    {/* Progress Bar */}
                     <div className="flex-1 max-w-[120px]">
                       <div className="w-full bg-gray-200 rounded-full h-2.5">
                         <div
-                          className={`h-2.5 rounded-full transition-all duration-500 ${
-                            displayProgress === 0 
-                              ? 'bg-gray-300' 
-                              : displayProgress < 30 
-                                ? 'bg-orange-500' 
-                                : displayProgress < 70 
-                                  ? 'bg-yellow-500' 
-                                  : 'bg-emerald-500'
-                          }`}
-                          style={{ width: `${Math.max(displayProgress, sudahSetor > 0 ? 3 : 0)}%` }}
+                          className={`h-2.5 rounded-full transition-all duration-500 ${c.color}`}
+                          style={{ width: c.width }}
                         />
                       </div>
                     </div>
-                    
-                    {/* Percentage */}
-                    <span className={`text-sm font-medium min-w-[45px] ${
-                      displayProgress === 0 
-                        ? 'text-gray-400' 
-                        : displayProgress < 30 
-                          ? 'text-orange-600' 
-                          : displayProgress < 70 
-                            ? 'text-yellow-600' 
-                            : 'text-emerald-600'
-                    }`}>
-                      {displayProgress}%
+                    <span className={`text-sm font-medium min-w-[45px] ${c.textColor}`}>
+                      {c.percentage}
                     </span>
                   </div>
                 </td>
+                
+                {/* Status Badge */}
                 <td className="px-6 py-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.className}`}>
-                    {status.label}
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${c.statusClass}`}>
+                    {c.statusLabel}
                   </span>
                 </td>
+                
                 <td className="px-6 py-4">
                   <button
                     onClick={() => onDetail(m.nim)}
